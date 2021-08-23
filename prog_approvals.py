@@ -20,9 +20,11 @@ match = approvals.merge(prisma, how='inner',left_on=['Est','Month of Service','P
 match['Approval Status'] = ''
 
 for i, j in match.iterrows():
-    if(match['Ordered'][i] == match['Actual Net Billable'][i]):
-        match.at[i,'Approval Status'] = 'Approved'
+    if(match['Product Name'][i] != 'Fees'):
+        if(match['Ordered'][i] == match['Actual Net Billable'][i]):
+            match.at[i,'Approval Status'] = 'Media Buy: Approved'
+        else:
+            match.at[i,'Approval Status'] = 'Media Buy: Ordered <> Billable'
     else:
-        match.at[i,'Approval Status'] = 'Ordered <> Billable'
-        
+        match.at[i, 'Approval Status'] = 'Fee Buy: Unknown'
 match.to_csv('test.csv')
