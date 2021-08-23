@@ -11,12 +11,18 @@ prisma = prisma.rename(columns={'Month of service': 'Month of Service', 'Estimat
 approvals['Month of Service'] = pd.to_datetime(approvals['Month of Service'])
 prisma['Month of Service'] = pd.to_datetime(prisma['Month of Service'])
 
-#Concatenate Estimate, MoS, Supplier
-approvals['UI'] = approvals['Est'].map(str) + approvals['Month of Service'].map(str) + approvals['Publisher']
-prisma['UI'] = prisma['Est'].map(str) + prisma['Month of Service'].map(str) + prisma['Publisher']
+# #Concatenate Estimate, MoS, Supplier
+# approvals['UI'] = approvals['Est'].map(str) + approvals['Month of Service'].map(str) + approvals['Publisher']
+# prisma['UI'] = prisma['Est'].map(str) + prisma['Month of Service'].map(str) + prisma['Publisher']
 
-approvals['Approval Status'] =""
+match = approvals.merge(prisma, how='inner',left_on=['Est','Month of Service','Publisher'],right_on=['Est','Month of Service','Publisher'],indicator=True)
 
-match = approvals.merge(prisma, how='left',left_on=['UI'],right_on=['UI'],indicator=True)
+match['Approval Status'] = ''
 
+for i, j in match.iterrows():
+    if(match['Ordered'][i] == match['Actual Net Billable'][i]):
+        match.at[i,'Approval Status'] = 'Approved'
+    else:
+        match.at[i,'Approval Status'] = 'Ordered <> Billable'
+        
 match.to_csv('test.csv')
