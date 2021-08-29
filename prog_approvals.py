@@ -1,9 +1,17 @@
 import pandas as pd
 from datetime import date
 import time
+import os
 from progress_bar import printProgressBar
 
 now = date.today().strftime('%B_%d_%Y')
+path = os.path.join('Output/','Draft Output_' + now + '/')
+
+if (os.path.isdir(path)):
+    print(path + ' directory already exists')
+else:
+    os.mkdir(path)
+    print(path  + ' directory created')
 
 prisma_cols = ['Month of service', 'Estimate code', 'Supplier short name', 'Actual Net Billable', 'Placement ID', 'Placement name']
 
@@ -63,4 +71,6 @@ for i, j in match.iterrows():
 
 draft_approvals_output = 'draft_approvals_output_' + now + '.csv'
 
-match.to_csv('Output/' + draft_approvals_output)
+match.to_csv(path + draft_approvals_output)
+
+print('Draft Approvals Output file saved at: ' + path + draft_approvals_output)
