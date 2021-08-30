@@ -19,7 +19,9 @@ dcm_rates = {
     'Rich Media display banner': 0.110
 }
 
+print('Reading DCM file...')
 dcm = pd.read_excel('Input/DCM.xlsx', sheet_name = 0)
+print('Reading Prisma file...')
 prisma = pd.read_excel('Input/Prisma.xlsx', header=1, sheet_name = 0, usecols=['Campaign name','Estimate code', 'Month of service', 'Supplier short name'])
 
 dcm['Month'] = pd.to_datetime(dcm['Month'])
@@ -28,8 +30,8 @@ dcm['Cost'] = ''
 
 prisma = prisma.rename(columns={'Month of service': 'Month', 'Supplier short name': 'Publisher', 'Campaign name': 'Campaign'})
 prisma['Month'] = pd.to_datetime(prisma['Month'])
-dedup_cols = ['Estimate code', 'Month', 'Publisher', 'Campaign']
-prisma = prisma.drop_duplicates(subset=dedup_cols, keep='first')
+dedupe_cols = ['Estimate code', 'Month', 'Publisher', 'Campaign']
+prisma = prisma.drop_duplicates(subset=dedupe_cols, keep='first')
 
 prisma.to_csv(path + 'Prisma_deduped_' + now + '.csv')
 
@@ -51,16 +53,23 @@ dcm_joined.to_csv(path + 'DCM_Fees_' + now + '.csv')
 dcm_joined['Cost'] = pd.to_numeric(dcm_joined['Cost'])
 
 dcm_grouped = dcm_joined.groupby(['Estimate code','Month','Publisher'])['Cost'].sum()
-dcm_grouped.to_csv(path + 'DCM_Grouped_' + now + '.csv')
+dcm_grouped.to_csv(path + 'DCM_By Estimate_' + now + '.csv')
 
-clinch = pd.read_excel('Input/Clinch Report.xlsx', sheet_name = 0)
+print('Reading Clinch file...')
+clinch = pd.read_excel('Input/Clinch Report.xlsx', sheet_name = 0, usecols=['Month', 'Placement Name','Impressions','Total'])
+clinch['Publisher'] = 'CLINCH'
+clinch['Month'] = pd.to_datetime(clinch['Month'])
+clinch = clinch.rename(columns={'Placement Name':'Campaign', 'Total': 'Cost'})
 
+clinch_joined = clinch.merge(prisma, how='left', on=['Month', 'Publisher', 'Campaign'] )
+print('Prisma matched to Clinch: ' + str(clinch_joined['Estimate code'].count()) + ' matches found.')
 
-# clinch, DCM, Invoice report
+clinch_joined.to_csv(path + 'Clinch_Fees_' + now + '.csv')
 
-# Match
-# Ingest invoice file, map reconciled status
-# calculate DCM
-# plot against keys
+clinch_joined['Cost'] = pd.to_numeric(clinch_joined['Cost'])
 
-# Output: Summed Sheet
+clinch_grouped = clinch_joined.groupby(['Estimate code','Month','Publisher'])['Cost'].sum()
+clinch_grouped.to_csv(path + 'Clinch_By Estimate_' + now + '.csv')
+
+consolidated_fees = clinch_grouped.append(dcm_grouped)
+consolidated_fees.to_csv(path + 'Consolidated Fees_' + now + '.csv')
