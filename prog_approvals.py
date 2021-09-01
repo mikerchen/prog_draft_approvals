@@ -25,7 +25,8 @@ for filename in os.listdir(input_path):
         print('Reading Consolidated Fees file: ' + input_path + filename)
     else:
         print('No consolidated fees file found.')
-invoices = pd.read_excel('Input/Invoices.xlsx', sheet_name=0, header=1, usecols=['Invoice month','Supplier short name','Invoice status','Product code','Estimate code','Placement ID'])
+invoices = pd.read_excel('Input/Invoices.xlsx', sheet_name=0, header=1, usecols=['Invoice month','Supplier short name',
+    'Invoice status','Product code','Estimate code','Placement ID'])
 
 prisma = prisma.rename(columns={'Month of service': 'Month of Service', 'Estimate code':'Est', 'Supplier short name': 'Publisher'})
 consolidated_fees = consolidated_fees.rename(columns={'Estimate code': 'Est', 'Month':'Month of Service'})
