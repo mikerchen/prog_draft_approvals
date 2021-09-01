@@ -17,27 +17,37 @@ else:
 prisma_cols = ['Month of service', 'Estimate code', 'Supplier short name', 'Actual Net Billable', 'Placement ID', 'Placement name']
 
 #Import Approvals, Prisma Workbook, Consolidated Fees
-approvals = pd.read_excel('Input/Approvals Grid.xlsx', sheet_name = 0)
-prisma = pd.read_excel('Input/Prisma.xlsx', header=1, sheet_name = 0, usecols=prisma_cols)
+approvals = pd.read_excel('Input/Approvals Grid.xlsx', sheet_name=0)
+prisma = pd.read_excel('Input/Prisma.xlsx', header=1, sheet_name=0, usecols=prisma_cols)
 for filename in os.listdir(input_path):
     if re.match('Consolidated Fees*(.+)\.csv', filename):
         consolidated_fees = pd.read_csv(input_path + filename)
         print('Reading Consolidated Fees file: ' + input_path + filename)
     else:
         print('No consolidated fees file found.')
-invoices = pd.read_excel('Input/Invoices.xlsx', sheet=0, usecols=['Invoice month','Supplier name','Invoice status','Product code','Estimate code'])
+invoices = pd.read_excel('Input/Invoices.xlsx', sheet_name=0, header=1, usecols=['Invoice month','Supplier short name','Invoice status','Product code','Estimate code','Placement ID'])
 
 prisma = prisma.rename(columns={'Month of service': 'Month of Service', 'Estimate code':'Est', 'Supplier short name': 'Publisher'})
+consolidated_fees = consolidated_fees.rename(columns={'Estimate code': 'Est', 'Month':'Month of Service'})
 
 #Convert Month of Service to datetime
 approvals['Month of Service'] = pd.to_datetime(approvals['Month of Service'])
 prisma['Month of Service'] = pd.to_datetime(prisma['Month of Service'])
-consolidated_fees['Month'] = pd.to_datetime(consolidated_fees['Month'])
+consolidated_fees['Month of Service'] = pd.to_datetime(consolidated_fees['Month of Service'])
 
-match = approvals.merge(prisma, how='left',on=['Est','Month of Service','Publisher'])
+prisma_grouped = prisma.groupby(['Est','Month of Service','Publisher'])['Actual Net Billable'].sum()
+prisma_grouped.to_csv(output_path + 'Prisma Grouped_' + now + '.csv')
 
+match = approvals.merge(prisma_grouped, how='left',on=['Est','Month of Service','Publisher'])
+match = match.merge(consolidated_fees, how='left',on=['Est','Month of Service','Publisher'])
+
+match.to_csv(output_path + 'draft_approval_test.csv')
+
+match['Same Month Fee Match Status'] = ''
+match['Previous Month Fees (Invoice Report)'] =''
 match['Approval Status'] = ''
 match['Estimate Status'] = ''
+
 
 print('Rows found in Draft Approvals Sheet: ' + str(approvals['Est'].count()))
 print('Rows found in Prisma Sheet: ' + str(prisma['Est'].count()))
@@ -51,24 +61,25 @@ for i, j in match.iterrows():
             diff = match['Ordered'][i] - match['Actual Net Billable'][i]
             diff_cur = "${:,.2f}".format(diff)
             match.at[i,'Approval Status'] = 'Media Buy (Ordered <> Billable): Delta = ' + str(diff_cur)
-    else:
-        match.at[i, 'Approval Status'] = 'Fee Buy: Unknown'
+    elif(match['Product Name'][i] == 'Fees'):
+        if(match['Ordered'][i] == match['Fee Cost'][i]):
+            match.at[i, 'Approval Status'] = 'Fee Buy: Approved'
+            match.at[i, 'Same Month Fee Match Status'] = 'Match'
+        else:
+            fee_diff = match['Ordered'][i] - match['Fee Cost'][i]
+            fee_diff_cur = "${:,.2f}".format(fee_diff)
+            match.at[i,'Approval Status'] = 'Fee Buy (Ordered <> Billable): Delta = ' + str(fee_diff_cur)
+            match.at[i, 'Same Month Fee Match Status'] = 'Mismatch'
 
-items = list(range(0,match['Est'].count()))
-l = len(items)
-
-# printProgressBar(0, l, prefix = 'Progress:', suffix = '', length = 50)
 
 for i, j in match.iterrows():
-    # for t, item in enumerate(items):
     if('Media Buy (Ordered <> Billable)' in match['Approval Status'][i]):
         estimate = match['Est'][i]
         for k, w in match.iterrows():
             if(match['Est'][k] == estimate):
                 match.at[k,'Estimate Status'] = 'Dependent'
     print(str(i + 1) + '/' + str(match['Est'].count()) + ' Complete')
-        # time.sleep(0.1)
-        # printProgressBar(t + 1, l, prefix = 'Progress:', suffix = str(t + 1) + '/' + str(match['Est'].count()), length = 50)
+
        
 # fees_sums
 
