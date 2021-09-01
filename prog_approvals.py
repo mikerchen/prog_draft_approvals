@@ -48,7 +48,6 @@ match['Previous Month Fees (Invoice Report)'] =''
 match['Approval Status'] = ''
 match['Estimate Status'] = ''
 
-
 print('Rows found in Draft Approvals Sheet: ' + str(approvals['Est'].count()))
 print('Rows found in Prisma Sheet: ' + str(prisma['Est'].count()))
 print('Rows found in Match Sheet: ' + str(match['Est'].count()))
@@ -70,7 +69,6 @@ for i, j in match.iterrows():
             fee_diff_cur = "${:,.2f}".format(fee_diff)
             match.at[i,'Approval Status'] = 'Fee Buy (Ordered <> Billable): Delta = ' + str(fee_diff_cur)
             match.at[i, 'Same Month Fee Match Status'] = 'Mismatch'
-
 
 for i, j in match.iterrows():
     if('Media Buy (Ordered <> Billable)' in match['Approval Status'][i]):
